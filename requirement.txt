@@ -1,10 +1,9 @@
-chardet
-flask[async]
+flask
 flask-cors
 langchain
 langchain-openai
-langchain_classic
-langgraph
 openai
 pydantic
+requests
+tqdm
 pandas
