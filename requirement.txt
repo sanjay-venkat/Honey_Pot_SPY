@@ -1,0 +1,10 @@
+chardet
+flask[async]
+flask-cors
+langchain
+langchain-openai
+langchain_classic
+langgraph
+openai
+pydantic
+pandas
