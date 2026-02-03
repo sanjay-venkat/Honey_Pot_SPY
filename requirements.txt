@@ -1,9 +1,9 @@
+langchain==0.1.20
+langchain-openai
 flask
 flask-cors
-langchain
-langchain-openai
 openai
-pydantic
+pandas
 requests
 tqdm
-pandas
+regex
