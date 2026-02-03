@@ -1,10 +1,11 @@
 class State(dict):
     def __init__(self):
         super().__init__({
+            "sessionId": "",
             "input_message": "",
             "scamDetected": None,
-            "persona": [],
-            "last_response": [],
+            "persona": "",
+            "last_response": "",
             "conversation_history": [],
             "upiIds": [],
             "phoneNumbers": [],
