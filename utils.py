@@ -8,7 +8,7 @@ import os, re, json
 # os.environ['OPENAI_API_KEY'] = openai_api_key
 
 # from langchain_openai import ChatOpenAI
-from langchain.memory import ConversationBufferMemory
+from langchain_core.memory import ConversationBufferMemory
 
 # llm = ChatOpenAI(model_name = "gpt-4o", verbose = False)
 
