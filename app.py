@@ -28,44 +28,29 @@ def invocation():
     global global_state
 
     data = request.get_json()
+
+    # Extract according to hackathon spec
     session_id = data.get("sessionId")
-    message_text = data["message"]["text"]
+    message = data.get("message")
+    conversation_history = data.get("conversationHistory", [])
+    metadata = data.get("metadata", {})
+
+    if not message or "text" not in message:
+        return jsonify({"error": "INVALID_REQUEST_BODY"}), 400
 
     # Update state
     global_state["sessionId"] = session_id
-    global_state["input_message"] = message_text
+    global_state["message"] = message
+    global_state["conversationHistory"] = conversation_history
+    global_state["metadata"] = metadata
 
-    # Run agents
+    # Run agents sequentially
     global_state = intent_agent(global_state)
     global_state = persona_agent(global_state)
     global_state = chat_agent(global_state)
     global_state = extractor_agent(global_state)
 
-    # If chat closed, send final result to GUVI
-    if global_state["close_chat"]:
-        payload = {
-            "sessionId": global_state["sessionId"],
-            "scamDetected": global_state["scamDetected"] == "True",
-            "totalMessagesExchanged": global_state["totalMessagesExchanged"],
-            "extractedIntelligence": {
-                "bankAccounts": global_state["bankAccounts"],
-                "upiIds": global_state["upiIds"],
-                "phishingLinks": global_state["phishingLinks"],
-                "phoneNumbers": global_state["phoneNumbers"],
-                "suspiciousKeywords": global_state["suspiciousKeywords"]
-            },
-            "agentNotes": global_state["agentNotes"]
-        }
-        try:
-            requests.post(
-                "https://hackathon.guvi.in/api/updateHoneyPotFinalResult",
-                json=payload,
-                timeout=5
-            )
-        except Exception as e:
-            print("Callback failed:", e)
-
-    # Return hackathon‑expected format
+    # Return hackathon-compliant response
     return jsonify({
         "status": "success",
         "reply": global_state["last_response"]
