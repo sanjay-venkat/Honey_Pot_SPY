@@ -29,31 +29,57 @@ def invocation():
 
     data = request.get_json()
 
-    # Extract according to hackathon spec
+    # Validate required fields
     session_id = data.get("sessionId")
     message = data.get("message")
     conversation_history = data.get("conversationHistory", [])
     metadata = data.get("metadata", {})
 
-    if not message or "text" not in message:
+    if not session_id or not message or "text" not in message:
         return jsonify({"error": "INVALID_REQUEST_BODY"}), 400
+
+    message_text = message["text"]
 
     # Update state
     global_state["sessionId"] = session_id
-    global_state["message"] = message
+    global_state["input_message"] = message_text
     global_state["conversationHistory"] = conversation_history
     global_state["metadata"] = metadata
 
-    # Run agents sequentially
+    # Run agents
     global_state = intent_agent(global_state)
     global_state = persona_agent(global_state)
     global_state = chat_agent(global_state)
     global_state = extractor_agent(global_state)
 
-    # Return hackathon-compliant response
+    # If chat closed, send final result to GUVI
+    if global_state.get("close_chat"):
+        payload = {
+            "sessionId": global_state.get("sessionId"),
+            "scamDetected": bool(global_state.get("scamDetected")),
+            "totalMessagesExchanged": len(global_state.get("conversationHistory", [])) + 1,
+            "extractedIntelligence": {
+                "bankAccounts": global_state.get("bankAccounts", []),
+                "upiIds": global_state.get("upiIds", []),
+                "phishingLinks": global_state.get("phishingLinks", []),
+                "phoneNumbers": global_state.get("phoneNumbers", []),
+                "suspiciousKeywords": global_state.get("suspiciousKeywords", [])
+            },
+            "agentNotes": global_state.get("agentNotes", "")
+        }
+        try:
+            requests.post(
+                "https://hackathon.guvi.in/api/updateHoneyPotFinalResult",
+                json=payload,
+                timeout=5
+            )
+        except Exception as e:
+            print("Callback failed:", e)
+
+    # Return hackathon‑expected format
     return jsonify({
         "status": "success",
-        "reply": global_state["last_response"]
+        "reply": global_state.get("last_response", "")
     })
 
 if __name__ == '__main__':
