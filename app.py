@@ -37,8 +37,8 @@ def invocation():
 
     if not session_id or not message or "text" not in message:
         return jsonify({"error": "INVALID_REQUEST_BODY"}), 400
-
-    message_text = message["text"]
+        
+    message_text = data.get("message", {}).get("text")
 
     # Update state
     global_state["sessionId"] = session_id
