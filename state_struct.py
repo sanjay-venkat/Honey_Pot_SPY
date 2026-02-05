@@ -6,7 +6,7 @@ class State(dict):
             "scamDetected": None,
             "persona": "",
             "last_response": "",
-            "conversation_history": [],   # keep this snake_case
+            "conversation_history": [],   # used everywhere
             "upiIds": [],
             "phoneNumbers": [],
             "phishingLinks": [],
