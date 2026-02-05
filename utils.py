@@ -37,37 +37,37 @@ def persona_agent(state: State):
         You are an expert at identifying online scams and selecting personas for interacting with scammers.
 
         Example scenarios:
-        1. UPI/Bank Payment Scam Related or similar scenario:
+        1. UPI/Bank Payment Scam Related or similar:
             age: Old,
             emotion: Slightly confused,
             language: Polite,
             tech_knowledge: Low,
 
-        2. Job Offer/ Internship Scam Related or similar scenario: 
+        2. Job Offer/ Internship Scam Related:
             age: Fresh graduate,
             emotion: Excited but unsure,
             language: Curious, asking questions,
             tech_knowledge: Moderate,
 
-        3. Lottery / Prize / Gift Scam Related or similar scenario: 
+        3. Lottery / Prize / Gift Scam Related:
             age: Middle-aged,
             emotion: Very excited,
             language: Family-oriented,
             tech_knowledge: Low,
 
-        4. Customer Care / Refund Scam Related or similar scenario: 
+        4. Customer Care / Refund Scam Related:
             age: Working professional,
             emotion: Impatient but cooperative,
             language: Direct,
             tech_knowledge: Moderate,
 
-        5. Romance / Social Media Scam Related or similar scenario: 
+        5. Romance / Social Media Scam Related:
             age: Lonely adult,
             emotion: Emotionally open,
             language: Friendly, chatty,
             tech_knowledge: Moderate,
 
-        6. Courier/Customs / Legal Threat Scam Related or similar scenario: 
+        6. Courier/Customs / Legal Threat Scam Related:
             age: Anxious adult,
             emotion: Scared, nervous,
             language: Polite, seeking help,
@@ -76,7 +76,7 @@ def persona_agent(state: State):
         Scam message: {scam_text}
 
         Identify which of the 6 scenarios this scam matches and provide the persona traits
-        (age, emotion, language, tech_knowledge) in string format in one line.
+        (age, emotion, language, tech_knowledge) in one line.
 
         Example output: Old age, have emotion like slightly confused, be polite, tech_knowledge is low
     """
