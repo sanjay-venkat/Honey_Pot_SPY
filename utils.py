@@ -137,11 +137,9 @@ def chat_agent(state: State):
 
     response = llm.invoke(prompt).content.strip()
 
-    # Update state
     state["totalMessagesExchanged"] += 1
     state["last_response"] = response
 
-    # Track conversation history
     if "conversation_history" not in state:
         state["conversation_history"] = []
     state["conversation_history"].append({
@@ -151,70 +149,3 @@ def chat_agent(state: State):
 
     return state
 
-def extractor_agent(state: State):
-    # Get both scammer message and AI reply
-    scammer_message = state["input_message"]
-    last_response = state["last_response"]
-
-    # Combine both sides of the conversation for scanning
-    text_to_scan = scammer_message + " " + last_response
-
-    # Regex extractions
-    if not state["upiIds"]:
-        upi_pattern = r"\b[\w\.\-]{2,256}@\w{2,64}\b"
-        upi_matches = re.findall(upi_pattern, text_to_scan)
-        state["upiIds"] = upi_matches
-
-    if not state["phoneNumbers"]:
-        phone_pattern = r"\b\d{10}\b"
-        phone_matches = re.findall(phone_pattern, text_to_scan)
-        state["phoneNumbers"] = phone_matches
-
-    if not state["phishingLinks"]:
-        url_pattern = r"(https?://[^\s]+)"
-        url_matches = re.findall(url_pattern, text_to_scan)
-        state["phishingLinks"] = url_matches
-
-    if not state["bankAccounts"]:
-        bank_pattern = r"\b\d{4}-\d{4}-\d{4}\b"
-        bank_matches = re.findall(bank_pattern, text_to_scan)
-        state["bankAccounts"] = bank_matches
-
-    # LLM-based suspicious keyword extraction
-    llm_prompt = f"""
-    You are a scam intelligence analyst.
-
-    From the message below:
-    1. Extract scam-related keywords or phrases (semantic, not regex)
-
-    Message:
-    "{text_to_scan}"
-
-    Return comma-separated phrases only.
-    """
-    llm_response = llm.invoke(llm_prompt).content.strip()
-    keywords = [k.strip() for k in llm_response.split(",") if k.strip()]
-    if isinstance(keywords, list):
-        state["suspiciousKeywords"].extend(keywords)
-    elif isinstance(keywords, str):
-        state["suspiciousKeywords"].append(keywords)
-
-    state["suspiciousKeywords"] = list(set(state["suspiciousKeywords"]))
-
-    # Analyst notes
-    if not state["agentNotes"]:
-        notes_prompt = f"""
-        You are a scam intelligence analyst.
-        Summarize the scammer behavior in ONE short sentence.
-
-        Message:{text_to_scan}
-        """
-        state["agentNotes"] = llm.invoke(notes_prompt).content.strip()
-
-    # Close chat if all intelligence collected
-    if state["upiIds"] and state["phoneNumbers"] and state["phishingLinks"] and state["bankAccounts"]:
-        state["close_chat"] = True
-    else:
-        state["close_chat"] = False
-
-    return state
