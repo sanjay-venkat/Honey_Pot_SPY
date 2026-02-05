@@ -4,17 +4,18 @@ from flask_cors import CORS, cross_origin
 from state_struct import State
 from utils import intent_agent, persona_agent, chat_agent, extractor_agent
 
-API_KEY = os.getenv("API_KEY")  # set in Render environment
+API_KEY = os.getenv("API_KEY")  # must match the key you gave GUVI
 
 app = Flask(__name__)
 CORS(app, resources={r"/*": {"origins": "*"}}, supports_credentials=True)
 
 global_state = State()
 
+
 @app.before_request
 def check_api_key():
-    # Only secure the /invocation endpoint
-    if request.endpoint == 'invocation':
+    # Secure both honeypot endpoints
+    if request.endpoint in ("invocation", "root_invocation"):
         key = request.headers.get("x-api-key")
         if key != API_KEY:
             return jsonify({
@@ -22,13 +23,27 @@ def check_api_key():
                 "message": "Invalid API key or malformed request"
             }), 401
 
-@app.route('/')
+
+@app.route('/', methods=['GET'])
 def health_check():
     return jsonify({'status': 'Flask is running'}), 200
 
+
+# POST on root – this is what the tester will call
+@app.route('/', methods=['POST'])
+@cross_origin()
+def root_invocation():
+    return handle_invocation()
+
+
+# Explicit /invocation endpoint – for your curl tests
 @app.route('/invocation', methods=['POST'])
 @cross_origin()
 def invocation():
+    return handle_invocation()
+
+
+def handle_invocation():
     global global_state
 
     # Safely parse JSON
@@ -39,19 +54,20 @@ def invocation():
             "message": "INVALID_REQUEST_BODY"
         }), 400
 
-    # Extract fields
+    # Extract required fields
     session_id = data.get("sessionId")
     message = data.get("message")
     conversation_history = data.get("conversationHistory", [])
     metadata = data.get("metadata", {})
 
-    # Validate required structure
+    # Validate sessionId
     if not isinstance(session_id, str) or not session_id.strip():
         return jsonify({
             "status": "error",
             "message": "INVALID_REQUEST_BODY"
         }), 400
 
+    # Validate message structure
     if not isinstance(message, dict):
         return jsonify({
             "status": "error",
@@ -65,7 +81,7 @@ def invocation():
             "message": "INVALID_REQUEST_BODY"
         }), 400
 
-    # Update state (use consistent key name)
+    # Update state
     global_state["sessionId"] = session_id
     global_state["input_message"] = message_text
     global_state["conversation_history"] = conversation_history
@@ -77,7 +93,7 @@ def invocation():
     global_state = chat_agent(global_state)
     global_state = extractor_agent(global_state)
 
-    # If chat closed, send final result to GUVI
+    # Final callback if chat closed
     if global_state.get("close_chat"):
         payload = {
             "sessionId": global_state.get("sessionId"),
@@ -101,11 +117,12 @@ def invocation():
         except Exception as e:
             print("Callback failed:", e)
 
-    # Hackathon‑expected format
+    # Response in expected format
     return jsonify({
         "status": "success",
         "reply": global_state.get("last_response", "")
     })
+
 
 if __name__ == '__main__':
     app.run(host='0.0.0.0', debug=True, port=8004, use_reloader=False)
