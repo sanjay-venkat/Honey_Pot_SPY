@@ -13,10 +13,14 @@ global_state = State()
 
 @app.before_request
 def check_api_key():
+    # Only secure the /invocation endpoint
     if request.endpoint == 'invocation':
         key = request.headers.get("x-api-key")
         if key != API_KEY:
-            return jsonify({"error": "Unauthorized"}), 401
+            return jsonify({
+                "status": "error",
+                "message": "Invalid API key or malformed request"
+            }), 401
 
 @app.route('/')
 def health_check():
@@ -27,23 +31,44 @@ def health_check():
 def invocation():
     global global_state
 
-    data = request.get_json()
+    # Safely parse JSON
+    data = request.get_json(silent=True)
+    if data is None:
+        return jsonify({
+            "status": "error",
+            "message": "INVALID_REQUEST_BODY"
+        }), 400
 
-    # Validate required fields
+    # Extract fields
     session_id = data.get("sessionId")
     message = data.get("message")
     conversation_history = data.get("conversationHistory", [])
     metadata = data.get("metadata", {})
 
-    if not session_id or not message or "text" not in message:
-        return jsonify({"error": "INVALID_REQUEST_BODY"}), 400
-        
-    message_text = data.get("message", {}).get("text")
+    # Validate required structure
+    if not isinstance(session_id, str) or not session_id.strip():
+        return jsonify({
+            "status": "error",
+            "message": "INVALID_REQUEST_BODY"
+        }), 400
 
-    # Update state
+    if not isinstance(message, dict):
+        return jsonify({
+            "status": "error",
+            "message": "INVALID_REQUEST_BODY"
+        }), 400
+
+    message_text = message.get("text")
+    if not isinstance(message_text, str) or not message_text.strip():
+        return jsonify({
+            "status": "error",
+            "message": "INVALID_REQUEST_BODY"
+        }), 400
+
+    # Update state (use consistent key name)
     global_state["sessionId"] = session_id
     global_state["input_message"] = message_text
-    global_state["conversationHistory"] = conversation_history
+    global_state["conversation_history"] = conversation_history
     global_state["metadata"] = metadata
 
     # Run agents
@@ -57,7 +82,7 @@ def invocation():
         payload = {
             "sessionId": global_state.get("sessionId"),
             "scamDetected": bool(global_state.get("scamDetected")),
-            "totalMessagesExchanged": len(global_state.get("conversationHistory", [])) + 1,
+            "totalMessagesExchanged": len(global_state.get("conversation_history", [])) + 1,
             "extractedIntelligence": {
                 "bankAccounts": global_state.get("bankAccounts", []),
                 "upiIds": global_state.get("upiIds", []),
@@ -76,7 +101,7 @@ def invocation():
         except Exception as e:
             print("Callback failed:", e)
 
-    # Return hackathon‑expected format
+    # Hackathon‑expected format
     return jsonify({
         "status": "success",
         "reply": global_state.get("last_response", "")
